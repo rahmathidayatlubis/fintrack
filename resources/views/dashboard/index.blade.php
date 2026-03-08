@@ -2,7 +2,7 @@
 
 @section('title', 'Beranda')
 
-@section('header-title', 'Beranda')
+@section('header-title', 'Berandallll')
 
 @section('content')
     <div class="px-4 pt-4 pb-2">
