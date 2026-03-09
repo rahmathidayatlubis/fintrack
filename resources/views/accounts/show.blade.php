@@ -112,9 +112,18 @@
     <div class="px-4">
         <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-700 text-gray-800">Riwayat Transaksi</h3>
-            <input type="month" value="{{ $filterMonth }}"
-                onchange="window.location='{{ route('accounts.show', ['account' => $account, 'type' => $filterType]) }}&month='+this.value"
-                class="text-xs text-blue-600 font-600 border-0 outline-none bg-transparent">
+
+            <div class="flex items-center gap-2">
+                <a href="{{ route('accounts.show', ['account' => $account, 'type' => $filterType, 'month' => 'all']) }}"
+                    class="text-xs px-2 py-1 rounded-lg border
+           {{ $filterMonth === 'all' ? 'bg-blue-600 text-white' : 'text-gray-600 border-gray-200' }}">
+                    Semua
+                </a>
+
+                <input type="month" value="{{ $filterMonth !== 'all' ? $filterMonth : '' }}"
+                    onchange="window.location='{{ route('accounts.show', ['account' => $account, 'type' => $filterType]) }}&month='+this.value"
+                    class="text-xs text-blue-600 font-600 border-0 outline-none bg-transparent">
+            </div>
         </div>
 
         @if ($transactions->isEmpty())

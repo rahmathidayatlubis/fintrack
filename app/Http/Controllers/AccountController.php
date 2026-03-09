@@ -92,7 +92,8 @@ class AccountController extends Controller
         }
 
         $filterMonth = request('month', now()->format('Y-m'));
-        if ($filterMonth) {
+
+        if ($filterMonth && $filterMonth !== 'all') {
             [$year, $month] = explode('-', $filterMonth);
             $query->whereYear('transaction_date', $year)
                 ->whereMonth('transaction_date', $month);
