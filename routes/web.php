@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/accounts/order', [AccountController::class, 'updateOrder'])->name('accounts.order');
 
     // Transactions
-    Route::resource('transactions', TransactionController::class)->except(['edit', 'update']);
+    Route::resource('transactions', TransactionController::class);
 });
 
 use App\Http\Controllers\DebtController;

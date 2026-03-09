@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -181,6 +182,113 @@ class TransactionController extends Controller
         $transaction->load(['account', 'category', 'destinationAccount', 'transferPair']);
 
         return view('transactions.show', compact('transaction'));
+    }
+
+    public function edit(Transaction $transaction)
+    {
+        $this->authorize('update', $transaction);
+
+        // Transaksi transfer tidak bisa diedit (terlalu kompleks, lebih baik hapus & buat ulang)
+        if ($transaction->type === 'transfer') {
+            return redirect()->route('transactions.show', $transaction)
+                ->with('error', 'Transaksi transfer tidak bisa diedit. Hapus dan buat ulang.');
+        }
+
+        $user = Auth::user();
+        $accounts = Account::where('user_id', $user->id)->where('is_active', true)->get();
+        $categories = Category::where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)->orWhereNull('user_id');
+        })->orderBy('type')->orderBy('name')->get();
+
+        $incomeCategories = $categories->where('type', 'income');
+        $expenseCategories = $categories->where('type', 'expense');
+
+        return view('transactions.edit', compact('transaction', 'accounts', 'categories', 'incomeCategories', 'expenseCategories'));
+    }
+
+    public function update(Request $request, Transaction $transaction)
+    {
+        $this->authorize('update', $transaction);
+
+        if ($transaction->type === 'transfer') {
+            return redirect()->route('transactions.show', $transaction)
+                ->with('error', 'Transaksi transfer tidak bisa diedit.');
+        }
+
+        $type = $transaction->type;
+
+        $baseRules = [
+            'account_id' => 'required|exists:accounts,id',
+            'transaction_date' => 'required|date',
+            'description' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:500',
+            'category_id' => 'nullable|exists:categories,id',
+        ];
+
+        $typeRules = match ($type) {
+            'income' => ['amount' => 'required|numeric|min:1'],
+            'expense' => [
+                'amount' => 'required|numeric|min:1',
+                'admin_fee' => 'nullable|numeric|min:0',
+                'recipient_name' => 'nullable|string|max:100',
+                'recipient_account' => 'nullable|string|max:50',
+                'reference_code' => 'nullable|string|max:100',
+            ],
+            'adjustment' => ['amount' => 'required|numeric|min:0'],
+            default => [],
+        };
+
+        $validated = $request->validate(array_merge($baseRules, $typeRules));
+
+        DB::transaction(function () use ($request, $transaction, $type) {
+            $account = Account::findOrFail($request->account_id);
+
+            // Rollback saldo lama
+            match ($type) {
+                'income' => $account->decrement('balance', $transaction->amount),
+                'expense' => $account->increment('balance', $transaction->amount + $transaction->admin_fee),
+                'adjustment' => null,
+                default => null,
+            };
+
+            // Hitung saldo baru
+            $adminFee = $request->admin_fee ?? 0;
+            $balanceBefore = $account->fresh()->balance;
+
+            $balanceAfter = match ($type) {
+                'income' => $balanceBefore + $request->amount,
+                'expense' => $balanceBefore - ($request->amount + $adminFee),
+                'adjustment' => $request->amount,
+                default => $balanceBefore,
+            };
+
+            // Update transaksi
+            $transaction->update([
+                'account_id' => $request->account_id,
+                'category_id' => $request->category_id,
+                'amount' => $request->amount,
+                'admin_fee' => $adminFee,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'recipient_name' => $request->recipient_name,
+                'recipient_account' => $request->recipient_account,
+                'reference_code' => $request->reference_code,
+                'description' => $request->description,
+                'notes' => $request->notes,
+                'transaction_date' => $request->transaction_date,
+            ]);
+
+            // Update saldo rekening
+            match ($type) {
+                'income' => $account->update(['balance' => $balanceAfter]),
+                'expense' => $account->update(['balance' => $balanceAfter]),
+                'adjustment' => $account->update(['balance' => $request->amount]),
+                default => null,
+            };
+        });
+
+        return redirect()->route('transactions.show', $transaction)
+            ->with('success', 'Transaksi berhasil diperbarui!');
     }
 
     public function destroy(Transaction $transaction)

@@ -16,4 +16,9 @@ class TransactionPolicy
     {
         return $user->id === $transaction->user_id;
     }
+
+    public function update(User $user, Transaction $transaction): bool
+    {
+        return $user->id === $transaction->user_id;
+    }
 }
