@@ -149,7 +149,7 @@ debt_payments
 **1. Clone repository**
 
 ```bash
-git clone https://github.com/username/fintrack.git
+git clone https://github.com/rahmathidayatlubis/fintrack.git
 cd fintrack
 ```
 
