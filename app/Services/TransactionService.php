@@ -76,11 +76,36 @@ class TransactionService
 
             $account->update(['balance' => $balanceAfter]);
 
-            // Jika admin fee > 0 dan ada rekening cash tujuan, tambah ke cash
-            if (! empty($data['fee_income_account_id']) && ! empty($data['fee_income_amount'])) {
+            // Top Up: saldo keluar langsung masuk ke rekening lain (cash/rekening sendiri)
+            if (! empty($data['top_up_account_id'])) {
+                $topUpAccount = Account::where('id', $data['top_up_account_id'])
+                    ->where('user_id', Auth::id())
+                    ->firstOrFail();
+
+                // Nominal top up = amount + admin_fee + komisi (semua uang yang keluar)
+                $topUpAmount = (float) $data['amount'] + (float) $adminFee + (float) ($data['fee_income_amount'] ?? 0);
+
+                $tbBefore = $topUpAccount->fresh()->balance;
+                $topUpAccount->update(['balance' => $tbBefore + $topUpAmount]);
+
+                Transaction::create([
+                    'user_id' => Auth::id(),
+                    'account_id' => $topUpAccount->id,
+                    'type' => 'income',
+                    'amount' => $topUpAmount,
+                    'admin_fee' => 0,
+                    'balance_before' => $tbBefore,
+                    'balance_after' => $tbBefore + $topUpAmount,
+                    'description' => 'Top up dari '.$account->name.($data['description'] ? ' - '.$data['description'] : ''),
+                    'notes' => $data['notes'] ?? null,
+                    'transaction_date' => $data['transaction_date'] ?? now(),
+                    'is_confirmed' => true,
+                ]);
+            } elseif (! empty($data['fee_income_account_id']) && ! empty($data['fee_income_amount'])) {
+                // Catat komisi/jasa saja (tanpa top up)
                 $this->createIncome([
                     'account_id' => $data['fee_income_account_id'],
-                    'amount' => $data['fee_income_amount'],
+                    'amount' => (float) $data['fee_income_amount'],
                     'description' => 'Jasa transfer dari '.($data['description'] ?? 'pengeluaran'),
                     'transaction_date' => $data['transaction_date'] ?? now(),
                     'category_id' => Category::where('name', 'Lainnya')->where('type', 'income')->first()?->id,

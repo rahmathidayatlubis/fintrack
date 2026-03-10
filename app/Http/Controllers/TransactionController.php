@@ -9,6 +9,7 @@ use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TransactionController extends Controller
 {
@@ -117,6 +118,7 @@ class TransactionController extends Controller
                     'category_id' => 'nullable|exists:categories,id',
                     'fee_income_account_id' => 'nullable|exists:accounts,id',
                     'fee_income_amount' => 'nullable|numeric|min:0',
+                    'top_up_account_id' => ['nullable', Rule::exists('accounts', 'id')->where('user_id', Auth::id())],
                     'payment_status' => 'nullable|in:paid,debt',
                     'due_date' => 'nullable|date',
                     'recipient_bank' => 'nullable|string|max:100',
