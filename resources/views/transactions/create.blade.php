@@ -131,7 +131,14 @@
                                 <li @click="pick(acc); $dispatch('fintrack:source-changed', {id: acc.id})"
                                     class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50"
                                     :class="selectedId == acc.id ? 'bg-blue-50' : ''">
-                                    <div class="w-8 h-8 rounded-xl flex-shrink-0" :style="`background:${acc.color}`">
+                                    <!-- Color dot -->
+                                    <div class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center"
+                                        :style="`background: ${acc.color}`">
+                                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6m18 0V5.25A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25V6" />
+                                        </svg>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-600 text-gray-900 truncate" x-text="acc.name"></p>
@@ -210,7 +217,14 @@
                                 <li @click="pick(acc)"
                                     class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50"
                                     :class="selectedId == acc.id ? 'bg-blue-50' : ''">
-                                    <div class="w-8 h-8 rounded-xl flex-shrink-0" :style="`background:${acc.color}`">
+                                    <!-- Color dot -->
+                                    <div class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center"
+                                        :style="`background: ${acc.color}`">
+                                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6m18 0V5.25A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25V6" />
+                                        </svg>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-600 text-gray-900 truncate" x-text="acc.name"></p>
@@ -281,8 +295,10 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="text-xs font-500 text-gray-500 mb-1.5 block">Komisi / Jasa Transfer</label>
+                <div x-show="txType === 'expense'">
+                    <label class="text-xs font-500 text-gray-500 mb-1.5
+                    block">Komisi / Jasa
+                        Transfer</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-600 text-gray-400">Rp</span>
                         <input type="text" inputmode="numeric" x-ref="feeIncomeDisplay" :value="feeIncomeFormatted"
@@ -366,20 +382,100 @@
             </div>
 
             {{-- Keterangan broo --}}
-            <div class="bg-white rounded-3xl p-4 shadow-card">
+            <div class="bg-white rounded-3xl p-4 shadow-card" x-show="txType === 'expense'">
                 <div x-show="isTopUp && paymentStatus === 'paid'" x-transition:enter="transition ease-out duration-200"
                     x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                     class="mt-4">
                     <label class="text-xs font-600 text-gray-500 mb-2 block">Rekening yang menerima saldo</label>
-                    <select x-model="topUpAccountId"
-                        :name="(isTopUp && paymentStatus === 'paid') ? 'top_up_account_id' : ''"
-                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all appearance-none">
-                        <option value="">Pilih rekening tujuan...</option>
-                        @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }} — Rp
-                                {{ number_format($account->balance, 0, ',', '.') }}</option>
-                        @endforeach
-                    </select>
+                    <div x-data="accountPicker('top_up_account_id', null, null)" class="relative">
+
+                        <input type="hidden" x-model="topUpAccountId"
+                            :name="(isTopUp && paymentStatus === 'paid') ? 'top_up_account_id' : ''"
+                            :value="selectedId">
+
+                        <button type="button" @click="toggle()"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 flex items-center justify-between transition-all"
+                            :class="open ? 'bg-white border-blue-500 ring-2 ring-blue-100' : ''">
+
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div x-show="selectedId" class="w-5 h-5 rounded-lg flex-shrink-0"
+                                    :style="`background:${selectedColor}`">
+                                </div>
+
+                                <span x-text="selectedLabel || 'Pilih rekening tujuan...'"
+                                    :class="selectedLabel ? 'text-gray-800' : 'text-gray-400'" class="truncate text-sm">
+                                </span>
+                            </div>
+
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
+                                :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.outside="open = false"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0 -translate-y-2"
+                            class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+                            style="display:none;">
+
+                            <div class="p-2 border-b border-gray-50">
+                                <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                    </svg>
+
+                                    <input type="text" x-model="search" x-ref="searchInput"
+                                        placeholder="Cari rekening..."
+                                        class="bg-transparent text-sm outline-none w-full text-gray-700 placeholder-gray-400">
+                                </div>
+                            </div>
+
+                            <ul class="max-h-48 overflow-y-auto py-1">
+
+                                <template x-for="acc in filteredAccounts()" :key="acc.id">
+                                    <li @click="pick(acc); topUpAccountId = acc.id"
+                                        class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50"
+                                        :class="selectedId == acc.id ? 'bg-blue-50' : ''">
+
+                                        <!-- Color dot -->
+                                        <div class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center"
+                                            :style="`background: ${acc.color}`">
+                                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"
+                                                stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6m18 0V5.25A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25V6" />
+                                            </svg>
+                                        </div>
+
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-600 text-gray-900 truncate" x-text="acc.name"></p>
+                                            <p class="text-xs text-gray-400" x-text="'Rp ' + rupiahFmt(acc.balance)"></p>
+                                        </div>
+
+                                        <svg x-show="selectedId == acc.id" class="w-4 h-4 text-blue-500 flex-shrink-0"
+                                            fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </li>
+                                </template>
+
+                                <li x-show="filteredAccounts().length === 0"
+                                    class="px-4 py-4 text-center text-sm text-gray-400">
+                                    Rekening tidak ditemukan
+                                </li>
+
+                            </ul>
+                        </div>
+
+                    </div>
 
                     <div x-show="amount > 0" class="mt-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
                         <p class="text-xs font-600 text-blue-600 mb-1">Saldo yang akan masuk ke rekening tujuan</p>
