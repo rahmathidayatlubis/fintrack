@@ -321,6 +321,20 @@
                 </div>
             </div>
 
+            {{-- ─── Info Penerima (Expense) ─────────────────────────────────────── --}}
+            <div x-show="txType === 'expense'" class="bg-white rounded-3xl p-4 shadow-card space-y-3">
+                <h3 class="text-xs font-600 text-gray-500 uppercase tracking-wide">Info Penerima (Opsional)</h3>
+                <input type="text" name="recipient_name" x-model="recipientName" value="{{ old('recipient_name') }}"
+                    placeholder="Nama penerima transfer"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
+                <input type="text" name="recipient_account" value="{{ old('recipient_account') }}"
+                    placeholder="Nomor rekening tujuan"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
+                <input type="text" name="reference_code" value="{{ old('reference_code') }}"
+                    placeholder="Kode referensi / ID transaksi"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
+            </div>
+
             {{-- ─── Status Pembayaran ───────────────────────────────────────────── --}}
             <div x-show="txType === 'expense'" class="bg-white rounded-3xl p-4 shadow-card">
                 <label class="text-xs font-600 text-gray-500 uppercase tracking-wide mb-3 block">Status Pembayaran</label>
@@ -382,7 +396,7 @@
             </div>
 
             {{-- Keterangan broo --}}
-            <div class="bg-white rounded-3xl p-4 shadow-card" x-show="txType === 'expense'">
+            <div class="bg-white rounded-3xl p-4 shadow-card" x-show="txType === 'expense' && paymentStatus === 'paid'">
                 <div x-show="isTopUp && paymentStatus === 'paid'" x-transition:enter="transition ease-out duration-200"
                     x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                     class="mt-4">
@@ -483,7 +497,8 @@
 
                     </div>
 
-                    <div x-show="amount > 0" class="mt-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
+                    <div x-show="amount > 0 && paymentStatus === 'paid'"
+                        class="mt-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
                         <p class="text-xs font-600 text-blue-600 mb-1">Saldo yang akan masuk ke rekening tujuan</p>
                         <p class="text-sm font-800 text-blue-700">Rp <span
                                 x-text="rupiahFmt(+amount + +adminFee + +feeIncomeAmount)"></span></p>
@@ -495,20 +510,6 @@
                         </p>
                     </div>
                 </div>
-            </div>
-
-            {{-- ─── Info Penerima (Expense) ─────────────────────────────────────── --}}
-            <div x-show="txType === 'expense'" class="bg-white rounded-3xl p-4 shadow-card space-y-3">
-                <h3 class="text-xs font-600 text-gray-500 uppercase tracking-wide">Info Penerima (Opsional)</h3>
-                <input type="text" name="recipient_name" x-model="recipientName" value="{{ old('recipient_name') }}"
-                    placeholder="Nama penerima transfer"
-                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
-                <input type="text" name="recipient_account" value="{{ old('recipient_account') }}"
-                    placeholder="Nomor rekening tujuan"
-                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
-                <input type="text" name="reference_code" value="{{ old('reference_code') }}"
-                    placeholder="Kode referensi / ID transaksi"
-                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 text-gray-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
 
             {{-- ─── Tanggal & Keterangan ────────────────────────────────────────── --}}

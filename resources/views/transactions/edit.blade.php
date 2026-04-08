@@ -12,7 +12,10 @@
 @endsection
 
 @section('header-title', 'Edit Transaksi')
-@section('header-right', '<div class="w-8"></div>')
+
+@section('header-right')
+    <div class="w-8"></div>
+@endsection
 
 @section('content')
     <div class="px-4 pt-4" x-data="editForm()">
