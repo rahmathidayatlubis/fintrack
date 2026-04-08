@@ -387,7 +387,13 @@
                     x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                     class="mt-4">
                     <label class="text-xs font-600 text-gray-500 mb-2 block">Rekening yang menerima saldo</label>
-                    <div x-data="accountPicker('top_up_account_id', null, null)" class="relative">
+                    <div x-data="accountPicker('top_up_account_id', null, null)" x-init="$nextTick(() => {
+                        let defaultAcc = filteredAccounts().find(a => a.name.toLowerCase() === 'cash');
+                        if (defaultAcc && !selectedId) {
+                            pick(defaultAcc);
+                            topUpAccountId = defaultAcc.id;
+                        }
+                    })" class="relative">
 
                         <input type="hidden" x-model="topUpAccountId"
                             :name="(isTopUp && paymentStatus === 'paid') ? 'top_up_account_id' : ''"
@@ -565,6 +571,17 @@
                 return (parseFloat(val) || 0).toLocaleString('id-ID');
             }
 
+            // ─── Auto-komisi berdasarkan nominal ─────────────────────────────────────────
+            function autoKomisi(nominal) {
+                const n = parseFloat(nominal) || 0;
+                if (n === 0) return 0;
+                if (n < 50000) return 3000;
+                if (n < 1000000) return 5000;
+                if (n < 10000000) return 10000;
+                if (n < 20000000) return 15000;
+                return 20000;
+            }
+
             // ─── accountPicker: komponen dropdown rekening yang reusable ──────────────────
             //   fieldName : nama hidden input yang di-submit
             //   initId    : id awal (dari old() / query param), atau null
@@ -639,6 +656,17 @@
                         const raw = e.target.value.replace(/\D/g, '');
                         this.amount = raw ? parseInt(raw) : '';
                         e.target.value = raw ? parseInt(raw).toLocaleString('id-ID') : '';
+
+                        // Auto-isi komisi jika expense dan belum pernah diubah manual
+                        if (this.txType === 'expense' && !this.feeIncomeManual) {
+                            const komisi = autoKomisi(this.amount);
+                            this.feeIncomeAmount = komisi;
+                            // Sync display input
+                            this.$nextTick(() => {
+                                const el = this.$refs.feeIncomeDisplay;
+                                if (el) el.value = komisi ? rupiahFmt(komisi) : '';
+                            });
+                        }
                     },
 
                     // Biaya admin
@@ -652,15 +680,30 @@
                         e.target.value = raw ? parseInt(raw).toLocaleString('id-ID') : '';
                     },
 
-                    // Komisi / jasa
+                    // Komisi / jasa — auto-fill, tapi bisa override manual
                     feeIncomeAmount: 0,
+                    feeIncomeManual: false, // flag: user sudah ubah manual
                     get feeIncomeFormatted() {
                         return this.feeIncomeAmount ? rupiahFmt(this.feeIncomeAmount) : '';
                     },
                     onFeeIncomeInput(e) {
                         const raw = e.target.value.replace(/\D/g, '');
                         this.feeIncomeAmount = raw ? parseInt(raw) : 0;
+                        this.feeIncomeManual = true; // tandai sudah diubah manual
                         e.target.value = raw ? parseInt(raw).toLocaleString('id-ID') : '';
+                    },
+
+                    // Top Up
+                    isTopUp: false,
+                    topUpAccountId: '',
+
+                    // Saat toggle top up: set default ke rekening bertipe 'cash'
+                    toggleTopUp() {
+                        this.isTopUp = !this.isTopUp;
+                        if (this.isTopUp && !this.topUpAccountId) {
+                            const cashAcc = accountsData.find(a => a.type === 'cash');
+                            if (cashAcc) this.topUpAccountId = cashAcc.id;
+                        }
                     },
 
                     // Misc
@@ -668,8 +711,6 @@
                     selectedCategory: {{ old('category_id', 'null') }},
                     paymentStatus: 'paid',
                     recipientName: '{{ old('recipient_name', '') }}',
-                    isTopUp: false,
-                    topUpAccountId: null,
 
                     getSourceBalance() {
                         const acc = accountsData.find(a => a.id == this.sourceId);
@@ -691,6 +732,34 @@
                     }
                 };
             }
+
+            // ─── Inject transaction_date saat submit ─────────────────────────────────────
+            // Ambil tanggal dari display input, tapi jam:menit:detik dari waktu submit
+            document.addEventListener('DOMContentLoaded', () => {
+                const form = document.querySelector('form[action*="transactions"]');
+                if (!form) return;
+
+                form.addEventListener('submit', function(e) {
+                    const display = document.getElementById('transaction_date_display');
+                    const hidden = document.getElementById('transaction_date_hidden');
+                    if (!display || !hidden) return;
+
+                    const displayVal = display.value; // format: "YYYY-MM-DDTHH:MM"
+                    const now = new Date();
+
+                    // Ambil tanggal dari display, jam dari sekarang
+                    if (displayVal) {
+                        const datePart = displayVal.split('T')[0]; // "YYYY-MM-DD"
+                        const timePart = now.toTimeString().slice(0, 8); // "HH:MM:SS"
+                        hidden.value = datePart + ' ' + timePart;
+                    } else {
+                        // Fallback: pakai waktu sekarang penuh
+                        const pad = n => String(n).padStart(2, '0');
+                        hidden.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ` +
+                            `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                    }
+                });
+            });
         </script>
     @endpush
 @endsection
