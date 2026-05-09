@@ -34,14 +34,14 @@
 @endsection
 
 @section('content')
-    <div class="px-4 pt-4" x-data="{ showPayForm: false, showAdjustForm: false }">
+    <div class="px-4 pt-4" x-data="{ showAdjustForm: false }">
 
-        {{-- Status & Amount Card --}}
+        {{-- ─── Status & Amount Card ──────────────────────────────────────────── --}}
         <div
             class="rounded-3xl p-5 mb-4 relative overflow-hidden
-        @if ($debt->status === 'paid') bg-gradient-to-br from-green-500 to-emerald-600
-        @elseif($debt->status === 'partial') bg-gradient-to-br from-orange-500 to-amber-600
-        @else bg-gradient-to-br from-red-500 to-rose-600 @endif">
+            @if ($debt->status === 'paid') bg-gradient-to-br from-green-500 to-emerald-600
+            @elseif($debt->status === 'partial') bg-gradient-to-br from-orange-500 to-amber-600
+            @else bg-gradient-to-br from-red-500 to-rose-600 @endif">
 
             <div class="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10"></div>
             <div class="absolute -bottom-8 -left-4 w-24 h-24 rounded-full bg-white/5"></div>
@@ -66,7 +66,6 @@
                 <p class="text-white text-3xl font-800">{{ $debt->formatted_effective_amount }}</p>
 
                 @if ($debt->status !== 'paid')
-                    {{-- Progress bar --}}
                     <div class="mt-3 mb-1">
                         <div class="flex justify-between text-xs text-white/70 mb-1">
                             <span>Terbayar {{ $debt->payment_percentage }}%</span>
@@ -85,7 +84,7 @@
             </div>
         </div>
 
-        {{-- Info Detail --}}
+        {{-- ─── Info Detail ───────────────────────────────────────────────────── --}}
         <div class="bg-white rounded-3xl overflow-hidden shadow-card mb-4 divide-y divide-gray-50">
             <div class="flex justify-between items-center px-4 py-3.5">
                 <span class="text-xs font-600 text-gray-400">Nama Penerima</span>
@@ -151,35 +150,113 @@
             @endif
         </div>
 
-        {{-- Action Buttons --}}
+        {{-- ─── Action Buttons ────────────────────────────────────────────────── --}}
         @if ($debt->status !== 'paid')
             <div class="space-y-2 mb-4">
 
-                {{-- Tandai Lunas Sekaligus --}}
+                {{-- Tandai Lunas --}}
                 <form action="{{ route('debts.markPaid', $debt) }}" method="POST"
-                    onsubmit="return confirm('Tandai hutang ini sebagai lunas sepenuhnya?')" x-data="{ showAccountPick: false }">
+                    onsubmit="return confirm('Tandai hutang ini sebagai lunas sepenuhnya?')" x-data="debtMarkPaidForm()">
                     @csrf
 
-                    <div class="my-5">
-                        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 px-1">
-                            <input type="checkbox" @change="showAccountPick = $event.target.checked"
-                                class="w-4 h-4 text-green-600 rounded">
-                            Tambahkan pelunasan ke rekening
-                        </label>
+                    {{-- Toggle: tambahkan ke rekening --}}
+                    <label
+                        class="flex items-center justify-between cursor-pointer bg-white rounded-2xl px-4 py-3.5 shadow-card mb-3">
+                        <div>
+                            <p class="text-sm font-600 text-gray-800">Tambahkan ke rekening</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Catat pelunasan sebagai pemasukan</p>
+                        </div>
+                        <div class="relative flex-shrink-0 ml-3" @click="withAccount = !withAccount">
+                            <div class="w-12 h-6 rounded-full transition-colors duration-200"
+                                :class="withAccount ? 'bg-green-500' : 'bg-gray-300'"></div>
+                            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+                                :class="withAccount ? 'translate-x-6' : 'translate-x-0'"></div>
+                        </div>
+                    </label>
+
+                    {{-- Custom account picker (muncul saat toggle ON) --}}
+                    <div x-show="withAccount" x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0" class="mb-3">
+
+                        <input type="hidden" name="account_id" :value="selectedId">
+
+                        <div class="relative">
+                            {{-- Trigger --}}
+                            <button type="button"
+                                @click="open = !open; if(open) $nextTick(() => $refs.searchInput?.focus())"
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 flex items-center justify-between transition-all"
+                                :class="open ? 'bg-white border-green-500 ring-2 ring-green-100' : ''">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div x-show="selectedId" class="w-5 h-5 rounded-lg flex-shrink-0"
+                                        :style="`background:${selectedColor}`"></div>
+                                    <span x-text="selectedLabel || 'Pilih rekening...'"
+                                        :class="selectedLabel ? 'text-gray-800' : 'text-gray-400'"
+                                        class="truncate text-sm"></span>
+                                </div>
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
+                                    :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+
+                            {{-- Dropdown --}}
+                            <div x-show="open" @click.outside="open = false"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 -translate-y-2"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-end="opacity-0 -translate-y-2"
+                                class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+                                style="display:none;">
+
+                                {{-- Search --}}
+                                <div class="p-2 border-b border-gray-50">
+                                    <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                        </svg>
+                                        <input type="text" x-model="search" x-ref="searchInput"
+                                            placeholder="Cari rekening..."
+                                            class="bg-transparent text-sm outline-none w-full text-gray-700 placeholder-gray-400">
+                                    </div>
+                                </div>
+
+                                {{-- Options --}}
+                                <ul class="max-h-48 overflow-y-auto py-1">
+                                    <template x-for="acc in filtered" :key="acc.id">
+                                        <li @click="pick(acc)"
+                                            class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 active:bg-gray-100"
+                                            :class="selectedId == acc.id ? 'bg-green-50' : ''">
+                                            <div class="w-8 h-8 rounded-xl flex-shrink-0"
+                                                :style="`background:${acc.color}`"></div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-600 text-gray-900 truncate" x-text="acc.name"></p>
+                                                <p class="text-xs text-gray-400"
+                                                    x-text="'Rp ' + Number(acc.balance).toLocaleString('id-ID')"></p>
+                                            </div>
+                                            <svg x-show="selectedId == acc.id"
+                                                class="w-4 h-4 text-green-500 flex-shrink-0" fill="none"
+                                                viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                        </li>
+                                    </template>
+                                    <li x-show="filtered.length === 0"
+                                        class="px-4 py-4 text-center text-sm text-gray-400">
+                                        Rekening tidak ditemukan
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
-                    <div x-show="showAccountPick" class="mb-3">
-                        <select name="account_id"
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 outline-none focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all appearance-none">
-                            <option value="">Pilih rekening...</option>
-                            @foreach ($accounts as $acc)
-                                <option value="{{ $acc->id }}">
-                                    {{ $acc->name }} — Rp {{ number_format($acc->balance, 0, ',', '.') }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
+                    {{-- Tombol submit --}}
                     <button type="submit"
                         class="w-full bg-green-600 text-white font-700 py-3.5 rounded-2xl text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
@@ -193,36 +270,30 @@
                     </button>
                 </form>
 
-                {{-- Catat Cicilan & Sesuaikan --}}
-                <div class="grid grid-cols-1 gap-3">
-                    <button @click="showAdjustForm = !showAdjustForm; showPayForm = false"
-                        class="py-3 rounded-2xl font-700 text-sm transition-all active:scale-95"
-                        :class="showAdjustForm
-                            ?
-                            'bg-orange-500 text-white shadow-lg shadow-orange-200' :
-                            'bg-orange-50 text-orange-700'">
-                        ✏️ Sesuaikan
-                    </button>
-                </div>
+                {{-- Sesuaikan --}}
+                <button @click="showAdjustForm = !showAdjustForm"
+                    class="w-full py-3 rounded-2xl font-700 text-sm transition-all active:scale-95"
+                    :class="showAdjustForm ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' :
+                        'bg-orange-50 text-orange-700'">
+                    ✏️ Sesuaikan Nominal
+                </button>
             </div>
 
             {{-- Form Sesuaikan Nominal --}}
             <div x-show="showAdjustForm" x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
-                class="bg-white rounded-3xl p-4 shadow-card mb-4" style="display: none;">
+                class="bg-white rounded-3xl p-4 shadow-card mb-4" style="display:none;">
                 <h3 class="text-sm font-700 text-gray-800 mb-1">Sesuaikan Nominal Hutang</h3>
                 <p class="text-xs text-gray-400 mb-3">
-                    Ubah total hutang yang harus dibayar. Nominal saat ini:
+                    Nominal saat ini:
                     <span class="font-700 text-gray-700">{{ $debt->formatted_effective_amount }}</span>
                 </p>
 
                 <form action="{{ route('debts.adjust', $debt) }}" method="POST" class="space-y-3">
                     @csrf
-
                     <div>
-                        <label class="text-xs font-600 text-gray-500 uppercase tracking-wide mb-1.5 block">
-                            Nominal Baru *
-                        </label>
+                        <label class="text-xs font-600 text-gray-500 uppercase tracking-wide mb-1.5 block">Nominal Baru
+                            *</label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-600 text-gray-500">Rp</span>
                             <input type="number" name="adjusted_amount"
@@ -232,16 +303,13 @@
                                 required>
                         </div>
                     </div>
-
                     <div>
-                        <label class="text-xs font-600 text-gray-500 uppercase tracking-wide mb-1.5 block">
-                            Alasan Penyesuaian
-                        </label>
+                        <label class="text-xs font-600 text-gray-500 uppercase tracking-wide mb-1.5 block">Alasan
+                            Penyesuaian</label>
                         <input type="text" name="notes" value="{{ old('notes') }}"
                             placeholder="cth: Potongan diskon, kesepakatan baru..."
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
                     </div>
-
                     <button type="submit"
                         class="w-full bg-orange-500 text-white font-700 py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
                         Simpan Penyesuaian
@@ -250,7 +318,7 @@
             </div>
         @endif
 
-        {{-- Riwayat Pembayaran --}}
+        {{-- ─── Riwayat Pembayaran ────────────────────────────────────────────── --}}
         @if ($debt->payments->isNotEmpty())
             <div class="bg-white rounded-3xl overflow-hidden shadow-card mb-4">
                 <div class="px-4 py-3 border-b border-gray-50">
@@ -261,7 +329,7 @@
                         <div class="flex items-center gap-3 px-4 py-3">
                             <div
                                 class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
-                    {{ $payment->type === 'adjustment' ? 'bg-orange-50' : 'bg-green-50' }}">
+                                {{ $payment->type === 'adjustment' ? 'bg-orange-50' : 'bg-green-50' }}">
                                 @if ($payment->type === 'adjustment')
                                     <svg class="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24"
                                         stroke-width="2" stroke="currentColor">
@@ -317,4 +385,45 @@
 
         <div class="h-4"></div>
     </div>
+
+    @push('scripts')
+        <script>
+            // ─── Data rekening dari PHP ───────────────────────────────────────────────
+            const debtAccountsData = {!! json_encode(
+                $accounts->map(
+                        fn($a) => [
+                            'id' => $a->id,
+                            'name' => $a->name,
+                            'balance' => (float) $a->balance,
+                            'color' => $a->color,
+                        ],
+                    )->values(),
+            ) !!};
+
+            function debtMarkPaidForm() {
+                return {
+                    withAccount: false,
+                    open: false,
+                    search: '',
+                    selectedId: null,
+                    selectedLabel: '',
+                    selectedColor: '',
+
+                    get filtered() {
+                        if (!this.search) return debtAccountsData;
+                        const q = this.search.toLowerCase();
+                        return debtAccountsData.filter(a => a.name.toLowerCase().includes(q));
+                    },
+
+                    pick(acc) {
+                        this.selectedId = acc.id;
+                        this.selectedLabel = acc.name + ' — Rp ' + Number(acc.balance).toLocaleString('id-ID');
+                        this.selectedColor = acc.color;
+                        this.open = false;
+                        this.search = '';
+                    },
+                };
+            }
+        </script>
+    @endpush
 @endsection
