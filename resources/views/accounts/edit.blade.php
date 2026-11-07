@@ -70,7 +70,8 @@
                         <button type="button" @click="open = !open; if(open) $nextTick(() => $refs.searchInput?.focus())"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-500 flex items-center justify-between transition-all"
                             :class="open ? 'bg-white border-blue-500 ring-2 ring-blue-100' : ''">
-                            <div class="flex items-center gap-3 min-w-0">
+                           <div class="flex items-start gap-3 min-w-0">
+                                {{-- Icon bulat warna --}}
                                 <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
                                     :style="`background: ${selectedMeta.color}`">
                                     <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -78,9 +79,11 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" :d="selectedMeta.icon" />
                                     </svg>
                                 </div>
-                                <div class="min-w-0">
-                                    <p class="text-sm font-600 text-gray-800" x-text="selectedMeta.label"></p>
-                                    <p class="text-xs text-gray-400 truncate" x-text="selectedMeta.desc"></p>
+
+                                {{-- Tambahkan self-start dan text-left di sini --}}
+                                <div class="min-w-0 self-start text-left">
+                                    <p class="text-sm font-600 text-gray-800 leading-tight" x-text="selectedMeta.label"></p>
+                                    <p class="text-xs text-gray-400 truncate mt-0.5" x-text="selectedMeta.desc"></p>
                                 </div>
                             </div>
                             <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
@@ -269,6 +272,13 @@
                     desc: 'DANA, GoPay, OVO, ShopeePay',
                     color: '#7C3AED',
                     icon: 'M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3',
+                },
+                {
+                    key: 'debt',
+                    label: 'Hutang & Pinjaman',
+                    desc: 'Pinjaman bank, hutang personal, kewajiban',
+                    color: '#EF4444',
+                    icon: 'M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5A2.25 2.25 0 0122.5 6.75v10.5a2.25 2.25 0 01-2.25 2.25H3.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 013.75 4.5zm0 3h16.5m-16.5 3h16.5M3.75 13.5h16.5',
                 },
                 {
                     key: 'savings',
